@@ -32,6 +32,9 @@ public:
 
 	QString print_parameters() const;
 
+	void load_xml();
+	void save_xml();
+
 protected:
 	virtual void run();
 

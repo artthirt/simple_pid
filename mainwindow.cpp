@@ -51,6 +51,7 @@ MainWindow::~MainWindow()
 void MainWindow::onEnding()
 {
 	ui->pb_start->setEnabled(true);
+	ui->pb_track->setEnabled(true);
 }
 
 void MainWindow::timeout()
@@ -61,10 +62,10 @@ void MainWindow::timeout()
 void MainWindow::on_pb_start_clicked()
 {
 	ui->pb_start->setEnabled(false);
+	ui->pb_track->setEnabled(false);
 
 	m_wrk->setTimeout(ui->sb_delay->value());
 
-	m_wrk->randn(ui->sb_count_point->value());
 	m_wrk->setSize(ui->sb_width->value(), ui->sb_height->value());
 
 	m_wrk->start_process();
@@ -99,4 +100,12 @@ void MainWindow::on_hs_speedMax_valueChanged(int value)
 void MainWindow::on_pb_stop_clicked()
 {
 	m_wrk->trackerPoint().close();
+}
+
+void MainWindow::on_pb_track_clicked()
+{
+	m_wrk->randn(ui->sb_count_point->value());
+	cv::Mat m;
+	m_wrk->trackerPoint().paint(m);
+	ui->w_process->setMat(m);
 }

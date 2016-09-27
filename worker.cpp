@@ -14,10 +14,14 @@ Worker::Worker(QObject* parent)
 	m_done = false;
 	m_start = false;
 	m_trackerPoint.func = std::function< void(const cv::Mat&) >(std::bind(&Worker::updateMat, this, std::placeholders::_1));
+
+	load_xml();
 }
 
 Worker::~Worker()
 {
+	save_xml();
+
 	m_trackerPoint.close();
 	m_done = true;
 	quit();
@@ -76,6 +80,25 @@ void Worker::start_process()
 QString Worker::print_parameters() const
 {
 	return QString(m_trackerPoint.print_parameters().c_str());
+}
+
+const std::string xml_config("config.worker.xml");
+
+void Worker::load_xml()
+{
+	FileStorage fs(xml_config, FileStorage::READ);
+
+	if(!fs.isOpened())
+		return;
+
+	m_delay = (int)fs["delay"];
+}
+
+void Worker::save_xml()
+{
+	FileStorage fs(xml_config, FileStorage::WRITE);
+
+	fs << "delay" << (int)m_delay;
 }
 
 void Worker::run()

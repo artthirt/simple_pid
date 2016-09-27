@@ -35,6 +35,8 @@ private slots:
 
 	void on_pb_stop_clicked();
 
+	void on_pb_track_clicked();
+
 private:
 	Ui::MainWindow *ui;
 
