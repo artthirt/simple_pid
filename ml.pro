@@ -4,9 +4,10 @@ CONFIG -= app_bundle
 CONFIG -= console
 CONFIG += qt
 
-QT += core gui
+QT += core gui widgets
 
-INCLUDEPATH += $(OPENCV_DIR)/include
+INCLUDEPATH += . \
+                $(OPENCV_DIR)/include
 
 CONFIG(debug, debug| release){
     END = 2413d
@@ -18,7 +19,7 @@ CONFIG(debug, debug| release){
 
 win32{
     INCLUDEPATH += $$PWD/fann/include
-    LIBS += -L$$PWD/fann/ -lfann
+#    LIBS += -L$$PWD/fann/ -lfann
 }else{
     END =
     LIBS += -lfann

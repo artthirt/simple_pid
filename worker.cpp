@@ -1,6 +1,5 @@
 #include "worker.h"
 
-#include <binders.h>
 #include <QTime>
 
 #include <QObject>

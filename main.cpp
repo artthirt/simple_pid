@@ -5,8 +5,12 @@
 #include <algorithm>
 #include <memory>
 
+#ifdef USE_FANN
+
 #include <doublefann.h>
 #include <fann_cpp.h>
+
+#endif
 
 #include "tracking.h"
 
@@ -99,6 +103,8 @@ void show_mats(const std::string& nm ,const vector< double >& X, size_t offset, 
 	imwrite(nm + ".bmp", mat);
 }
 
+#ifdef USE_FANN
+
 typedef unsigned int uint;
 
 void _ml()
@@ -164,6 +170,8 @@ void _ml()
 
 	cout << "end nn\n";
 }
+
+#endif
 
 void uses_cv()
 {
