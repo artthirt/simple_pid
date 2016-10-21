@@ -71,6 +71,9 @@ struct Obj{
 
 	cv::Vec2f pos;	// position of object
 
+	cv::Scalar color_border;
+	cv::Scalar default_color_border;
+
 	double distance_trigger;	// distance trigger
 	double kp_v;				// proportional
 	double kd_v;				// derivative
@@ -140,6 +143,22 @@ public:
 	 */
 	void set_pos(int x, int y);
 	/**
+	 * @brief set_object_pos
+	 * @param pt
+	 */
+	void set_object_pos(const cv::Point &pt);
+	/**
+	 * @brief dist_to_object
+	 * @param pt
+	 * @return
+	 */
+	double dist_to_object(const cv::Point &pt);
+	/**
+	 * @brief change_current_goal
+	 * @param pt
+	 */
+	void change_current_goal(const cv::Point &pt);
+	/**
 	 * @brief clear
 	 */
 	void clear();
@@ -148,7 +167,7 @@ public:
 	 * draw on image current trajectory with current next and after next goal point
 	 * @param pts - [0] point - current; [1] - next goal; [2] - after next goal
 	 */
-	void draw_searching(const std::vector<cv::Vec2f> &pts);
+	void draw_searching(const std::vector<cv::Vec2f> &pts = std::vector<cv::Vec2f>());
 	/**
 	 * @brief draw_axes
 	 * draw grid in image
@@ -251,6 +270,8 @@ private:
 	double m_koeff_resist;
 	double m_epsilon;
 	int m_next;
+
+	std::vector< cv::Vec2f> m_save_pts;
 
 	std::string m_parameters;
 

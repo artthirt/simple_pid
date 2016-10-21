@@ -43,6 +43,8 @@ private slots:
 
 	void on_dsb_dist_trigger_valueChanged(double arg1);
 
+	void onMouseEvent(const QPoint& pt, int state);
+
 private:
 	Ui::MainWindow *ui;
 

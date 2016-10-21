@@ -42,6 +42,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	cv::Mat m;
 	m_wrk->trackerPoint().paint(m);
 	ui->w_process->setMat(m);
+
+	connect(ui->w_process, SIGNAL(mouse_event(QPoint,int)), this, SLOT(onMouseEvent(QPoint,int)));
 }
 
 MainWindow::~MainWindow()
@@ -127,4 +129,9 @@ void MainWindow::on_dsb_kd_speed_valueChanged(double arg1)
 void MainWindow::on_dsb_dist_trigger_valueChanged(double arg1)
 {
 	m_wrk->trackerPoint().obj().distance_trigger = arg1;
+}
+
+void MainWindow::onMouseEvent(const QPoint &pt, int state)
+{
+	m_wrk->mouse_event(cv::Point(pt.x(), pt.y()), state);
 }

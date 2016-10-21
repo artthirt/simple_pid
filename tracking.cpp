@@ -56,6 +56,9 @@ Obj::Obj()
 	lock = false;
 	dist_switch = 0;
 	speed_switch = 0;
+
+	default_color_border = Scalar(20, 50, 100);
+	color_border = default_color_border;
 }
 
 double Obj::get_theta() const
@@ -121,7 +124,7 @@ void Obj::draw_obj(Mat &mat, float place_coeff)
 	Mat(out_v).convertTo(out_vi, CV_32S);
 
 	fillConvexPoly(mat, out_vi, Scalar(110, 130, 150));
-	polylines(mat, out_vi, true, Scalar(20, 50, 100), 1, 4);
+	polylines(mat, out_vi, true, color_border, 2, 4);
 }
 
 void Obj::init()
@@ -230,13 +233,44 @@ void TrackerPoint::set_pos(int x, int y)
 	}
 }
 
+void TrackerPoint::set_object_pos(const Point &pt)
+{
+	Vec2f vp = Vec2f(pt.x - m_width/2, pt.y - m_height/2)/m_place_coeff * place_length;
+
+	m_obj.pos = vp;
+}
+
+double TrackerPoint::dist_to_object(const Point &pt)
+{
+	Vec2f cv = Vec2f(m_width/2, m_height/2);
+
+	Point p2 = V2P(m_obj.pos/place_length * m_place_coeff + cv);
+
+	Point pd = p2 - pt;
+
+	return norm(pd);
+}
+
+void TrackerPoint::change_current_goal(const Point &pt)
+{
+	if(m_current_id > 0 && m_current_id < m_track.size()){
+		Vec2f vp = Vec2f(pt.x - m_width/2, pt.y - m_height/2)/m_place_coeff * place_length;
+		m_track[m_current_id] = vp;
+	}
+}
+
 void TrackerPoint::clear()
 {
 	m_track.clear();
+	m_save_pts.clear();
 }
 
 void TrackerPoint::draw_searching(const vector< Vec2f> &pts)
 {
+	if(pts.size()){
+		m_save_pts = pts;
+	}
+
 	Mat mat = Mat(m_height, m_width, CV_8UC3, Scalar(255, 255, 255));
 
 	Vec2f cv = Vec2f(m_width/2, m_height/2);
@@ -253,13 +287,13 @@ void TrackerPoint::draw_searching(const vector< Vec2f> &pts)
 
 	draw_axes(mat);
 
-	if(pts.size())
-		circle(mat, V2P(pts[0]/place_length * m_place_coeff + cv), 10, cv::Scalar(0, 0, 150), 4);
-	if(pts.size() > 1)
-		circle(mat, V2P(pts[1]/place_length * m_place_coeff + cv), 10, cv::Scalar(0, 150, 0), 4);
+	if(m_save_pts.size())
+		circle(mat, V2P(m_save_pts[0]/place_length * m_place_coeff + cv), 10, cv::Scalar(0, 0, 150), 4);
+	if(m_save_pts.size() > 1)
+		circle(mat, V2P(m_save_pts[1]/place_length * m_place_coeff + cv), 10, cv::Scalar(0, 150, 0), 4);
 
-	for(size_t j = 2; j < pts.size(); j++){
-		circle(mat, V2P(pts[j]/place_length * m_place_coeff + cv), 10, cv::Scalar(150, 0, 0), 4);
+	for(size_t j = 2; j < m_save_pts.size(); j++){
+		circle(mat, V2P(m_save_pts[j]/place_length * m_place_coeff + cv), 10, cv::Scalar(150, 0, 0), 4);
 	}
 
 
@@ -328,8 +362,12 @@ void TrackerPoint::init()
 	m_obj.Kd = 0.4;
 	m_obj.v = 0.5;
 	m_obj.max_v = 0.5;
+	m_save_pts.clear();
 
 	randn();
+
+	if(m_track.size())
+		m_obj.pos = m_track[0];
 }
 
 void TrackerPoint::calc(){
@@ -361,6 +399,9 @@ void TrackerPoint::calc(){
 
 	while(id < m_track.size() && !m_done){
 		Vec2f pn = (m_track[id]);
+
+		pt = m_obj.pos;
+
 		Vec2f d = pn - pt;
 		double n = norm(d);
 
@@ -482,6 +523,8 @@ void TrackerPoint::paint(Mat& mat){
 	mat = Mat(m_height, m_width, CV_8UC3, Scalar(255, 255, 255));
 
 	draw_axes(mat);
+
+	m_obj.draw_obj(mat, m_place_coeff);
 
 	if(m_track.empty())
 		return;

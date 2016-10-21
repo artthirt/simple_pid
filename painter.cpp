@@ -5,6 +5,7 @@
 #include <QImage>
 #include <QDebug>
 #include <QPainter>
+#include <QMouseEvent>
 
 using namespace cv;
 
@@ -48,6 +49,11 @@ Painter::Painter(QWidget *parent) :
 	ui(new Ui::Painter)
 {
 	ui->setupUi(this);
+
+	setMouseTracking(true);
+
+	m_aspect_ratio = 1;
+	m_aspect_ratio_widget = 1;
 }
 
 Painter::~Painter()
@@ -85,6 +91,9 @@ void Painter::paintEvent(QPaintEvent *)
 	double aspect_ratio_widget = (double)rt.width()/rt.height();
 	double aspect_ratio = (double)img.cols/img.rows;
 
+	m_aspect_ratio = aspect_ratio;
+	m_aspect_ratio_widget = aspect_ratio_widget;
+
 	if(aspect_ratio_widget > aspect_ratio){
 		cv::resize(img, out, Size(rt.height() * aspect_ratio, rt.height()));
 	}else{
@@ -93,6 +102,45 @@ void Painter::paintEvent(QPaintEvent *)
 
 	tmp = Mat2QImage(out);
 
-	painter.drawImage(QPoint(rt.width()/2 - tmp.width()/2, rt.height()/2 - tmp.height()/2), tmp);
+	m_leftTop = QPoint(rt.width()/2 - tmp.width()/2, rt.height()/2 - tmp.height()/2);
 
+	painter.drawImage(m_leftTop, tmp);
+
+}
+
+QPoint Painter::restoreCoord(const QPoint &pt)
+{
+	QPoint p = pt - m_leftTop;
+	QPointF pf = QPointF(p);
+	QRectF rt = QRectF(rect());
+	if(m_aspect_ratio_widget > m_aspect_ratio){
+		pf *= m_mat.rows / rt.height();
+	}else{
+		pf *= m_mat.cols /rt.width();
+	}
+
+//	qDebug() << pt << pf;
+
+	return pf.toPoint();
+}
+
+void Painter::mousePressEvent(QMouseEvent *event)
+{
+	QPoint pt = restoreCoord(event->pos());
+
+	emit mouse_event(pt, 0);
+}
+
+void Painter::mouseReleaseEvent(QMouseEvent *event)
+{
+	QPoint pt = restoreCoord(event->pos());
+
+	emit mouse_event(pt, 1);
+}
+
+void Painter::mouseMoveEvent(QMouseEvent *event)
+{
+	QPoint pt = restoreCoord(event->pos());
+
+	emit mouse_event(pt, 2);
 }

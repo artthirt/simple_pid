@@ -3,6 +3,7 @@
 #include <QTime>
 
 #include <QObject>
+#include <QDebug>
 #include <QMetaType>
 
 using namespace cv;
@@ -14,6 +15,10 @@ Worker::Worker(QObject* parent)
 	m_done = false;
 	m_start = false;
 	m_trackerPoint.func = std::function< void(const cv::Mat&) >(std::bind(&Worker::updateMat, this, std::placeholders::_1));
+
+	m_mouse_down = false;
+	m_lock_object = false;
+	m_update_mat = false;
 
 	load_xml();
 }
@@ -82,6 +87,16 @@ QString Worker::print_parameters() const
 	return QString(m_trackerPoint.print_parameters().c_str());
 }
 
+bool Worker::is_update_mat() const
+{
+	return m_update_mat;
+}
+
+void Worker::reset_update()
+{
+	m_update_mat = false;
+}
+
 const std::string xml_config("config.worker.xml");
 
 void Worker::load_xml()
@@ -101,11 +116,52 @@ void Worker::save_xml()
 	fs << "delay" << (int)m_delay;
 }
 
+void Worker::mouse_event(const Point &pt, int state)
+{
+	double len = m_trackerPoint.dist_to_object(pt);
+
+	m_mouse_pt = pt;
+
+	qDebug() << len;
+
+	switch (state) {
+		case 0:
+			m_mouse_down = true;
+			if(len < 40){
+				qDebug() << "it is object under mouse";
+				m_lock_object = true;
+			}else{
+				m_trackerPoint.change_current_goal(pt);
+			}
+
+			break;
+		case 1:
+			m_mouse_down = false;
+			m_lock_object = false;
+			break;
+		case 2:
+			if(m_lock_object){
+				m_trackerPoint.set_object_pos(pt);
+				m_update_mat = true;
+			}else{
+			}
+			break;
+		default:
+			break;
+	}
+}
+
 void Worker::run()
 {
 	connect(this, SIGNAL(starting()), SLOT(onStarting()), Qt::QueuedConnection);
 
+	m_timer = new QTimer;
+	connect(m_timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
+	m_timer->start(100);
+
 	exec();
+
+	delete m_timer;
 }
 
 void Worker::onStarting()
@@ -119,6 +175,19 @@ void Worker::onStarting()
 	emit resMat(res);
 
 	emit ending();
+}
+
+void Worker::onTimeout()
+{
+	double len = m_trackerPoint.dist_to_object(m_mouse_pt);
+
+	if(len < 40){
+		qDebug() << "it is object under mouse";
+		m_trackerPoint.obj().color_border = cv::Scalar(250, 100, 100);
+	}else{
+		m_trackerPoint.obj().color_border = m_trackerPoint.obj().default_color_border;
+	}
+	m_trackerPoint.draw_searching();
 }
 
 void Worker::updateMat(const cv::Mat &mat)

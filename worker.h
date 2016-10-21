@@ -32,8 +32,18 @@ public:
 
 	QString print_parameters() const;
 
+	bool is_update_mat() const;
+	void reset_update();
+
 	void load_xml();
 	void save_xml();
+
+	/**
+	 * @brief mouse_event
+	 * @param pt
+	 * @param state - 0 - down, 1 - up, 2 - move
+	 */
+	void mouse_event(const cv::Point& pt, int state);
 
 protected:
 	virtual void run();
@@ -46,12 +56,19 @@ signals:
 
 public slots:
 	void onStarting();
+	void onTimeout();
 
 private:
 	bool m_start;
 	bool m_done;
 	tracking::TrackerPoint m_trackerPoint;
 	uint m_delay;
+
+	bool m_mouse_down;
+	bool m_lock_object;
+	bool m_update_mat;
+
+	cv::Point m_mouse_pt;
 
 	QTimer *m_timer;
 
