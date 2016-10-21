@@ -19,13 +19,19 @@ const size_t max_points = 20000;
 const int c_width = 2048;
 const int c_height = 2048;
 
-const float place_length = 50;
-const float c_place_coeff = c_height;
+const float place_length = 50;			/// size of plane for object
+const float c_place_coeff = c_height;	/// for convert size of plane to image
 
 const int c_randn = 15;
 
 /////////////////////////////////
 
+/**
+ * @brief R2A
+ * radian to angle
+ * @param val
+ * @return
+ */
 inline double R2A(double val)
 {
 	return val * 180. / CV_PI;
@@ -270,6 +276,7 @@ void TrackerPoint::draw_searching(const vector< Vec2f> &pts)
 
 //	imshow("searching", mat);
 
+	/// call for external signal
 	if(func){
 		func(mat);
 	}
@@ -360,6 +367,7 @@ void TrackerPoint::calc(){
 		Vec2f v_des = d;
 //			d = clip(d, q_max);
 
+		/// check distance for switch to next goal
 		if(n < m_epsilon){
 			prev = pn;
 			id_prev = id;
@@ -367,6 +375,7 @@ void TrackerPoint::calc(){
 			continue;
 		}
 
+		/// check and calculate speed when it is the last goal
 		if(id == m_track.size() - 1){
 			double r = d.dot(v);
 			if(r > 0)
@@ -378,6 +387,7 @@ void TrackerPoint::calc(){
 
 		m_current_id = id;
 
+		/// get desire angle and error for it
 		double theta_des = atan2(v_des[1], v_des[0]);
 		double e_k = theta_des - m_obj.get_theta();
 
