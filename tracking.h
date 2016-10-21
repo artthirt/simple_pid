@@ -34,14 +34,7 @@ inline cv::Vec2f clip(const cv::Vec2f& p, double max)
 }
 
 struct Obj{
-	Obj(){
-		v = w = e_k = E_k = 0;
-		theta = 0;
-		Kp = Ki = Kd = 0;
-
-		max_w = CV_PI/10;
-		max_v = 0.1;
-	}
+	Obj();
 
 	double v;
 	double w;
@@ -58,6 +51,15 @@ struct Obj{
 
 	cv::Vec2f pos;
 
+	double distance_trigger;
+	double kp_v;
+	double kd_v;
+	double prev_speed;
+	double dist_switch;
+	double speed_switch;
+	bool last;
+	bool lock;
+
 	double get_theta() const;
 
 	void update_values();
@@ -67,6 +69,10 @@ struct Obj{
 	cv::Vec2f speed() const;
 
 	void draw_obj(cv::Mat& mat, float place_coeff);
+
+	void init();
+
+	void calc_v(double dist_to_goal, double real_speed);
 };
 
 class TrackerPoint{

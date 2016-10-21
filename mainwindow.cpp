@@ -24,6 +24,10 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->dsb_ki->setValue(m_wrk->trackerPoint().obj().Ki);
 	ui->dsb_kd->setValue(m_wrk->trackerPoint().obj().Kd);
 
+	ui->dsb_kp_speed->setValue(m_wrk->trackerPoint().obj().kp_v);
+	ui->dsb_kd_speed->setValue(m_wrk->trackerPoint().obj().kd_v);
+	ui->dsb_dist_trigger->setValue(m_wrk->trackerPoint().obj().distance_trigger);
+
 	ui->hs_speedMax->setValue(m_wrk->trackerPoint().speedMax()/MAX_RANGE_SPEED * ui->hs_speedMax->maximum());
 	ui->dsb_speedMax->setValue(m_wrk->trackerPoint().speedMax());
 
@@ -108,4 +112,19 @@ void MainWindow::on_pb_track_clicked()
 	cv::Mat m;
 	m_wrk->trackerPoint().paint(m);
 	ui->w_process->setMat(m);
+}
+
+void MainWindow::on_dsb_kp_speed_valueChanged(double arg1)
+{
+	m_wrk->trackerPoint().obj().kp_v = arg1;
+}
+
+void MainWindow::on_dsb_kd_speed_valueChanged(double arg1)
+{
+	m_wrk->trackerPoint().obj().kd_v = arg1;
+}
+
+void MainWindow::on_dsb_dist_trigger_valueChanged(double arg1)
+{
+	m_wrk->trackerPoint().obj().distance_trigger = arg1;
 }

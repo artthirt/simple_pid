@@ -6,6 +6,8 @@
 #include <functional>
 #include <sstream>
 
+#include <QDebug>
+
 #include <opencv2/opencv.hpp>
 
 using namespace tracking;
@@ -30,6 +32,25 @@ inline double R2A(double val)
 }
 
 /////////////////////////////////
+
+Obj::Obj()
+{
+	v = w = e_k = E_k = 0;
+	theta = 0;
+	Kp = Ki = Kd = 0;
+
+	max_w = CV_PI/10;
+	max_v = 0.1;
+
+	kp_v = 0.8;
+	kd_v = 0.1;
+	distance_trigger = 2;
+	prev_speed = 0;
+	last = false;
+	lock = false;
+	dist_switch = 0;
+	speed_switch = 0;
+}
 
 double Obj::get_theta() const
 {
@@ -95,6 +116,49 @@ void Obj::draw_obj(Mat &mat, float place_coeff)
 
 	fillConvexPoly(mat, out_vi, Scalar(110, 130, 150));
 	polylines(mat, out_vi, true, Scalar(20, 50, 100), 1, 4);
+}
+
+void Obj::init()
+{
+	prev_speed = 0;
+	E_k = 0;
+	theta = 0;
+	last = false;
+	lock = false;
+	dist_switch = 0;
+	speed_switch = 0;
+	v = max_v;
+}
+
+void Obj::calc_v(double dist_to_goal, double real_speed)
+{
+	if(dist_to_goal < distance_trigger){
+		if(!lock){
+			lock = true;
+			dist_switch = dist_to_goal;
+			speed_switch = real_speed;
+		}
+		last = true;
+	}
+
+	if(last){
+		qDebug() << real_speed;
+
+		double t = dist_to_goal / dist_switch;
+		double vv = speed_switch * t;
+
+		double e = vv - real_speed;
+
+		double dedt = real_speed - prev_speed;
+
+		double u = kp_v * e + kd_v * dedt;
+
+		v = u;
+		v = std::min(max_v, v);
+		v = std::max(-max_v, v);
+
+		prev_speed = real_speed;
+	}
 }
 
 /////////////////////////////////
@@ -280,8 +344,11 @@ void TrackerPoint::calc(){
 	cout << "count_point=" << m_track.size() << endl;
 
 //	namedWindow("searching");
+	double eps_v = 10e-4;
 
 	Vec2f u;
+
+	m_obj.init();
 
 	m_obj.pos = pt;
 
@@ -298,6 +365,15 @@ void TrackerPoint::calc(){
 			id_prev = id;
 			id++;
 			continue;
+		}
+
+		if(id == m_track.size() - 1){
+			double r = d.dot(v);
+			if(r > 0)
+				r = 1;
+			else
+				r = -1;
+			m_obj.calc_v(n, r * norm(v));
 		}
 
 		m_current_id = id;
@@ -350,6 +426,38 @@ void TrackerPoint::calc(){
 		ss << "v.y:\t" << v[1] << endl;
 
 		m_parameters = ss.str();
+
+		draw_searching(pts);
+
+		{
+			m_obj.update_values();
+			v *= m_koeff_resist;
+		}
+	}
+
+	while(norm(v) > eps_v && !m_done){
+		pt += v;
+		m_obj.pos = pt;
+
+		m_searching.push_back(pt);
+
+		stringstream ss;
+		ss << "next id:\t" << id << endl;
+		ss << "dist:\t" << "n/a" << endl;
+		ss << "e_k:\t" << "n/a" << endl;
+		ss << "E_I:\t" << "n/a" << endl;
+		ss << "theta:\t" << R2A(m_obj.theta) << endl;
+		ss << "th_des:\t" << "n/a" << endl;
+		ss << "w:\t" << R2A(m_obj.w) << endl;
+		ss << "v:\t" << R2A(m_obj.v) << endl;
+		ss << "pos.x:\t" << m_obj.pos[0] << endl;
+		ss << "pos.y:\t" << m_obj.pos[1] << endl;
+		ss << "v.x:\t" << v[0] << endl;
+		ss << "v.y:\t" << v[1] << endl;
+
+		m_parameters = ss.str();
+
+		vector< Vec2f > pts;
 
 		draw_searching(pts);
 
@@ -450,6 +558,16 @@ void TrackerPoint::load_xml()
 		m_epsilon = fs["epsilon_pass"];
 	}
 
+	if(!fs["kp_v"].empty()){
+		m_obj.kp_v = fs["kp_v"];
+	}
+	if(!fs["kd_v"].empty()){
+		m_obj.kd_v = fs["kd_v"];
+	}
+	if(!fs["dist_trigger"].empty()){
+		m_obj.distance_trigger = fs["dist_trigger"];
+	}
+
 	randn(cnt);
 }
 
@@ -464,6 +582,10 @@ void TrackerPoint::save_xml()
 	fs << "max_v" << m_obj.max_v;
 	fs << "width" << m_width;
 	fs << "height" << m_height;
+
+	fs << "kp_v" << m_obj.kp_v;
+	fs << "kd_v" << m_obj.kd_v;
+	fs << "dist_trigger" << m_obj.distance_trigger;
 
 	int cnt = m_track.size();
 	fs << "count_track" << cnt;

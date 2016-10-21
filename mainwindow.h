@@ -37,6 +37,12 @@ private slots:
 
 	void on_pb_track_clicked();
 
+	void on_dsb_kp_speed_valueChanged(double arg1);
+
+	void on_dsb_kd_speed_valueChanged(double arg1);
+
+	void on_dsb_dist_trigger_valueChanged(double arg1);
+
 private:
 	Ui::MainWindow *ui;
 
