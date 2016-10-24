@@ -124,6 +124,26 @@ struct Obj{
 	 * @param real_speed
 	 */
 	void calc_v(double dist_to_goal, double real_speed);
+	/**
+	 * @brief calc_speed_cruise
+	 * speed for cruise control
+	 * @param real_speed
+	 */
+	void calc_cruise_speed(double real_speed);
+	/**
+	 * @brief calc_speed
+	 * for general speed
+	 * @param dist_to_goal
+	 * @param real_speed
+	 * @param last
+	 */
+	void calc_speed(double dist_to_goal, double real_speed, bool last);
+	/**
+	 * @brief calc_angle_speed
+	 * calculation angle speed
+	 * @param v_des
+	 */
+	void calc_angle_speed(const cv::Vec2f &v_des);
 };
 
 class TrackerPoint{

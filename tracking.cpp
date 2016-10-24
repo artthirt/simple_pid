@@ -37,6 +37,15 @@ inline double R2A(double val)
 	return val * 180. / CV_PI;
 }
 
+
+Vec2f get_speed(double speed, double angle)
+{
+	return cv::Vec2f(
+				speed * cos(angle),
+				speed * sin(angle)
+				);
+}
+
 /////////////////////////////////
 
 Obj::Obj()
@@ -129,14 +138,14 @@ void Obj::draw_obj(Mat &mat, float place_coeff)
 
 void Obj::init()
 {
-	prev_speed = 0;
 	E_k = 0;
 	theta = 0;
 	last = false;
 	lock = false;
 	dist_switch = 0;
 	speed_switch = 0;
-	v = max_v;
+	v = 0;
+	prev_speed = 0;
 }
 
 void Obj::calc_v(double dist_to_goal, double real_speed)
@@ -168,6 +177,52 @@ void Obj::calc_v(double dist_to_goal, double real_speed)
 
 		prev_speed = real_speed;
 	}
+}
+
+void Obj::calc_speed(double dist_to_goal, double real_speed, bool last)
+{
+	if(last){
+		calc_v(dist_to_goal, real_speed);
+	}else{
+		calc_cruise_speed(real_speed);
+	}
+	ensure_v();
+}
+
+void Obj::calc_angle_speed(const cv::Vec2f &v_des)
+{
+	/// get desire angle and error for it
+	double theta_des = atan2(v_des[1], v_des[0]);
+	double e_k = theta_des - this->get_theta();
+
+	e_k = atan2(sin(e_k), cos(e_k));
+	cout << "theta_des=" << theta_des * 180. / CV_PI << " e_k=" << e_k * 180. / CV_PI << endl;
+
+	double e_p = e_k;
+
+	double E_I = this->E_k + e_k;
+
+	double e_d = e_k - this->e_k;
+
+	this->w = this->Kp * e_p + this->Ki * E_I + this->Kd * e_d;
+
+	this->e_k = e_k;
+	this->E_k = E_I;
+
+}
+
+void Obj::calc_cruise_speed(double real_speed)
+{
+	double e = max_v - real_speed;
+	double dedt = real_speed - prev_speed;
+
+	double u = kp_v * e + kd_v * dedt;
+
+	v = u;
+	v = std::min(max_v, v);
+	v = std::max(-max_v, v);
+
+	prev_speed = real_speed;
 }
 
 /////////////////////////////////
@@ -360,7 +415,7 @@ void TrackerPoint::init()
 	m_obj.Kp = 0.98;
 	m_obj.Ki = 0.07;
 	m_obj.Kd = 0.4;
-	m_obj.v = 0.5;
+	m_obj.v = 0;
 	m_obj.max_v = 0.5;
 	m_save_pts.clear();
 
@@ -397,6 +452,9 @@ void TrackerPoint::calc(){
 
 	m_obj.pos = pt;
 
+	double real_speed = 0;
+	double theta = 0;
+
 	while(id < m_track.size() && !m_done){
 		Vec2f pn = (m_track[id]);
 
@@ -417,38 +475,32 @@ void TrackerPoint::calc(){
 		}
 
 		/// check and calculate speed when it is the last goal
-		if(id == m_track.size() - 1){
-			double r = d.dot(v);
+		double r = d.dot(v);
+		{
 			if(r > 0)
 				r = 1;
 			else
 				r = -1;
-			m_obj.calc_v(n, r * norm(v));
+		}
+		bool last = false;
+		if(id == m_track.size() - 1){
+			last = true;
+			//m_obj.calc_v(n, r * norm(v));
 		}
 
 		m_current_id = id;
 
-		/// get desire angle and error for it
-		double theta_des = atan2(v_des[1], v_des[0]);
-		double e_k = theta_des - m_obj.get_theta();
+		m_obj.calc_angle_speed(v_des);
 
-		e_k = atan2(sin(e_k), cos(e_k));
-		cout << "theta_des=" << theta_des * 180. / CV_PI << " e_k=" << e_k * 180. / CV_PI << endl;
+		/// calculation speed without a lateral intertia
+		real_speed += m_obj.v;
+		theta = m_obj.theta;
 
-		double e_p = e_k;
+		m_obj.calc_speed(n, real_speed, last);
+		v = get_speed(real_speed, theta);
+//		v += m_obj.ensure_v();
 
-		double E_I = m_obj.E_k + e_k;
-
-		double e_d = e_k - m_obj.e_k;
-
-		m_obj.w = m_obj.Kp * e_p + m_obj.Ki * E_I + m_obj.Kd * e_d;
-
-		m_obj.e_k = e_k;
-		m_obj.E_k = E_I;
-
-		v += m_obj.ensure_v();
-
-		crop(v, m_speed_max);
+//		crop(v, m_speed_max);
 
 		pt += v;
 		m_obj.pos = pt;
@@ -465,12 +517,13 @@ void TrackerPoint::calc(){
 		stringstream ss;
 		ss << "next id:\t" << id << endl;
 		ss << "dist:\t" << n << endl;
-		ss << "e_k:\t" << e_k << endl;
-		ss << "E_I:\t" << E_I << endl;
+//		ss << "e_k:\t" << e_k << endl;
+//		ss << "E_I:\t" << E_I << endl;
 		ss << "theta:\t" << R2A(m_obj.theta) << endl;
-		ss << "th_des:\t" << R2A(theta_des) << endl;
+//		ss << "th_des:\t" << R2A(theta_des) << endl;
 		ss << "w:\t" << R2A(m_obj.w) << endl;
-		ss << "v:\t" << R2A(m_obj.v) << endl;
+		ss << "v:\t" << m_obj.v << endl;
+		ss << "v_r:\t" << real_speed << endl;
 		ss << "pos.x:\t" << m_obj.pos[0] << endl;
 		ss << "pos.y:\t" << m_obj.pos[1] << endl;
 		ss << "v.x:\t" << v[0] << endl;
@@ -495,12 +548,13 @@ void TrackerPoint::calc(){
 		stringstream ss;
 		ss << "next id:\t" << id << endl;
 		ss << "dist:\t" << "n/a" << endl;
-		ss << "e_k:\t" << "n/a" << endl;
-		ss << "E_I:\t" << "n/a" << endl;
+//		ss << "e_k:\t" << "n/a" << endl;
+//		ss << "E_I:\t" << "n/a" << endl;
 		ss << "theta:\t" << R2A(m_obj.theta) << endl;
-		ss << "th_des:\t" << "n/a" << endl;
+//		ss << "th_des:\t" << "n/a" << endl;
 		ss << "w:\t" << R2A(m_obj.w) << endl;
 		ss << "v:\t" << R2A(m_obj.v) << endl;
+		ss << "v_r:\t" << real_speed << endl;
 		ss << "pos.x:\t" << m_obj.pos[0] << endl;
 		ss << "pos.y:\t" << m_obj.pos[1] << endl;
 		ss << "v.x:\t" << v[0] << endl;
