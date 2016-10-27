@@ -331,14 +331,14 @@ void TrackerPoint::draw_searching(const vector< Vec2f> &pts)
 	Vec2f cv = Vec2f(m_width/2, m_height/2);
 
 	for(size_t i = 1; i < m_track.size(); i++){
-		circle(mat, V2P(m_track[i - 1]/place_length * m_place_coeff + cv), 10, cv::Scalar(180, 180, 255), 3);
+		circle(mat, V2P(m_track[i - 1]/place_length * m_place_coeff + cv), 10, cv::Scalar(100, 100, 200), 3);
 
 		line(mat, V2P(m_track[i - 1]/place_length * m_place_coeff + cv),
-				V2P(m_track[i]/place_length * m_place_coeff + cv), Scalar(180, 180, 255), 1);
+				V2P(m_track[i]/place_length * m_place_coeff + cv), Scalar(100, 100, 200), 1);
 
 //			line(mat_speed, c, c + m_speed[i - 1], Scalar(0, 255, 0), 1);
 	}
-	circle(mat, V2P(m_track.back()/place_length * m_place_coeff + cv), 10, cv::Scalar(255, 180, 180), 3);
+	circle(mat, V2P(m_track.back()/place_length * m_place_coeff + cv), 10, cv::Scalar(200, 100, 100), 3);
 
 	draw_axes(mat);
 
